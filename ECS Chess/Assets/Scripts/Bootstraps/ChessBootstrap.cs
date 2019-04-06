@@ -1,4 +1,5 @@
 ﻿using ECSChess.Components.Chess;
+using ECSChess.Components.Input;
 using ECSChess.Misc.Enums;
 using System;
 using System.Collections.Generic;
@@ -53,7 +54,7 @@ namespace ECSChess.Bootstraps
                 typeof(Scale), typeof(Translation), typeof(Rotation), typeof(LocalToWorld), // Transform Data
                 typeof(Piece), typeof(Team),  // Chess-Data
                 typeof(RenderMesh), // Render-Data
-                typeof(WorldRenderBounds)); // Collision-Data 
+                typeof(WorldRenderBounds), typeof(Selectable)); // Collision-Data 
             boardTileArchetype = entityManager.CreateArchetype(
                 typeof(Translation), typeof(Rotation),
                 typeof(RenderMesh),
