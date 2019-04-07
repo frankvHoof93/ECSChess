@@ -1,4 +1,5 @@
-﻿using ECSChess.Components.Input;
+﻿using System;
+using ECSChess.Components.Input;
 using ECSChess.Jobs;
 using ECSChess.Misc.DataTypes;
 using Unity.Collections;
@@ -51,8 +52,9 @@ namespace ECSChess.Systems
         private NativeArray<RayIntersectionResult> intersectionResults;
         #endregion
         #endregion
-
+        
         #region Methods
+        #region Unity
         /// <summary>
         /// Runs when SelectionSystem is Created. Sets up EntityQueries & CommandBufferSystem
         /// </summary>
@@ -96,47 +98,64 @@ namespace ECSChess.Systems
                 // Size of array should only go down during play
                 intersectionResults = new NativeArray<RayIntersectionResult>(amountOfIntersectables, Allocator.Persistent);
             }
+            // Handle Keyboard
+            HandleKeyboardInput();
             // Get position of Mouse on Screen
             Vector2 mousePos = Input.mousePosition;
             // Check whether MousePos is in Screen
             if (mousePos.x >= 0 && mousePos.x <= Screen.width
                 && mousePos.y >= 0 && mousePos.y <= Screen.height)
-            {
-                Ray r = camera.ScreenPointToRay(mousePos);
-                // Create RaycastJob (Parallel)
-                RayCastJob<Selectable> jobRayCast = new RayCastJob<Selectable>
-                {
-                    Ray = r,
-                    Results = intersectionResults
-                };
-                // Schedule RaycastJob
-                JobHandle returnHandle = jobRayCast.Schedule(this, inputDeps);
-                // Create SortingJob (Not Parallel)
-                SortIntersectionJob sortingJob = new SortIntersectionJob
-                {
-                    Array = intersectionResults
-                };
-                // Schedule SortingJob with dependency on RaycastJob
-                returnHandle = sortingJob.Schedule(returnHandle);
-                // Create Buffer to send EntityCommands to.
-                EntityCommandBuffer buffer = commandBufferSystem.CreateCommandBuffer();
-                // Create SelectionJob
-                SelectClosestIntersectionJob selectionJob = new SelectClosestIntersectionJob
-                {
-                    IntersectionResults = intersectionResults,
-                    Buffer = buffer,
-                    Click = Input.GetMouseButtonDown(0),
-                    Hovered = currentHovered.ToEntityArray(Allocator.TempJob), // Deallocated by Job itself
-                    Selected = currentSelected.ToEntityArray(Allocator.TempJob) // Deallocated by Job itself
-                };
-                // Create final handle (SelectionJob with dependency on SortingJob)
-                returnHandle = selectionJob.Schedule(returnHandle);
-                // Add dependency to buffer
-                commandBufferSystem.AddJobHandleForProducer(returnHandle);
-                return returnHandle;
-            }
+                return HandleMouseInput(inputDeps, mousePos); // Handle Mouse
             else return inputDeps; // Nothing to do, return inputDeps
         }
+
+        private void HandleKeyboardInput()
+        {
+            // Deselect
+            if (Input.GetKeyDown(KeyCode.Escape) || Input.GetMouseButtonDown(1))
+                using (NativeArray<Entity> selectedEntities = currentSelected.ToEntityArray(Allocator.TempJob)) // Must be allocated as TempJob, because we're in a JobComponentSystem?
+                    foreach (Entity entity in selectedEntities)
+                        EntityManager.RemoveComponent(entity, typeof(Selected));
+        }
+        #endregion
+
+        #region Private
+        private JobHandle HandleMouseInput(JobHandle inputDeps, Vector2 mousePos)
+        {
+            Ray r = camera.ScreenPointToRay(mousePos);
+            // Create RaycastJob (Parallel)
+            RayCastJob<Selectable> jobRayCast = new RayCastJob<Selectable>
+            {
+                Ray = r,
+                Results = intersectionResults
+            };
+            // Schedule RaycastJob
+            JobHandle returnHandle = jobRayCast.Schedule(this, inputDeps);
+            // Create SortingJob (Not Parallel)
+            SortIntersectionJob sortingJob = new SortIntersectionJob
+            {
+                Array = intersectionResults
+            };
+            // Schedule SortingJob with dependency on RaycastJob
+            returnHandle = sortingJob.Schedule(returnHandle);
+            // Create Buffer to send EntityCommands to.
+            EntityCommandBuffer buffer = commandBufferSystem.CreateCommandBuffer();
+            // Create SelectionJob
+            SelectClosestIntersectionJob selectionJob = new SelectClosestIntersectionJob
+            {
+                IntersectionResults = intersectionResults,
+                Buffer = buffer,
+                Click = Input.GetMouseButtonDown(0),
+                Hovered = currentHovered.ToEntityArray(Allocator.TempJob), // Deallocated by Job itself
+                Selected = currentSelected.ToEntityArray(Allocator.TempJob) // Deallocated by Job itself
+            };
+            // Create final handle (SelectionJob with dependency on SortingJob)
+            returnHandle = selectionJob.Schedule(returnHandle);
+            // Add dependency to buffer
+            commandBufferSystem.AddJobHandleForProducer(returnHandle);
+            return returnHandle;
+        }
+        #endregion
         #endregion
     }
 }
