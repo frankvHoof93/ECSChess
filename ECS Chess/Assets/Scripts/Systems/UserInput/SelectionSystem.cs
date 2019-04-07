@@ -131,7 +131,11 @@ namespace ECSChess.Systems.UserInput
         /// <returns>Output-Dependencies for Jobs</returns>
         private JobHandle HandleMouseInput(JobHandle inputDeps, Vector2 mousePos)
         {
+            Profiler.BeginSample("MouseInput");
+            Profiler.BeginSample("ScreenPointToRay");
             Ray r = camera.ScreenPointToRay(mousePos);
+            Profiler.EndSample();
+            Profiler.BeginSample("RayCastJob");
             // Create RaycastJob (Parallel)
             RayCastJob<Selectable> jobRayCast = new RayCastJob<Selectable>
             {
@@ -140,6 +144,8 @@ namespace ECSChess.Systems.UserInput
             };
             // Schedule RaycastJob
             JobHandle returnHandle = jobRayCast.Schedule(this, inputDeps);
+            Profiler.EndSample();
+            Profiler.BeginSample("SortingJob");
             // Create SortingJob (Not Parallel)
             SortIntersectionJob sortingJob = new SortIntersectionJob
             {
@@ -147,19 +153,30 @@ namespace ECSChess.Systems.UserInput
             };
             // Schedule SortingJob with dependency on RaycastJob
             returnHandle = sortingJob.Schedule(returnHandle);
+            Profiler.EndSample();
+            Profiler.BeginSample("ToEntityArray");
+            NativeArray<Entity> hovered = currentHovered.ToEntityArray(Allocator.TempJob, out JobHandle gatherHovered);
+            NativeArray<Entity> selected = currentHovered.ToEntityArray(Allocator.TempJob, out JobHandle gatherSelected);
+            returnHandle = JobHandle.CombineDependencies(returnHandle, gatherHovered, gatherSelected);
+            Profiler.EndSample();
+            Profiler.BeginSample("SelectClosestJob");
             // Create SelectionJob
             SelectClosestIntersectionJob selectionJob = new SelectClosestIntersectionJob
             {
                 IntersectionResults = intersectionResults,
                 Buffer = commandBufferSystem.CreateCommandBuffer(),
                 Click = Input.GetMouseButtonDown(0),
-                Hovered = currentHovered.ToEntityArray(Allocator.TempJob), // Deallocated by Job itself
-                Selected = currentSelected.ToEntityArray(Allocator.TempJob) // Deallocated by Job itself
+                Hovered = hovered, // Deallocated by Job itself
+                Selected = selected // Deallocated by Job itself
             };
             // Create final handle (SelectionJob with dependency on SortingJob)
             returnHandle = selectionJob.Schedule(returnHandle);
+            Profiler.EndSample();
+            Profiler.BeginSample("CommandBuffer");
             // Add dependency to buffer
             commandBufferSystem.AddJobHandleForProducer(returnHandle);
+            Profiler.EndSample();
+            Profiler.EndSample();
             return returnHandle;
         }
         #endregion
