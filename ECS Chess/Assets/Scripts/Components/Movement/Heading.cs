@@ -21,6 +21,6 @@ namespace ECSChess.Components.Movement
         /// <summary>
         /// Magnitude of Heading (Speed)
         /// </summary>
-        public float Mag { get { return math.length(Value); } }
+        public float Mag { get { return math.length(Value); } set { Value = Norm * value; } }
     }
 }

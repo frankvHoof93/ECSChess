@@ -114,15 +114,6 @@ namespace ECSChess.Systems.UserInput
             if (Input.GetKeyDown(KeyCode.Escape) || Input.GetMouseButtonDown(1))
                 using (NativeArray<Entity> selectedEntities = currentSelected.ToEntityArray(Allocator.TempJob)) // Must be allocated as TempJob, because we're in a JobComponentSystem?
                     EntityManager.RemoveComponent(selectedEntities, typeof(Selected)); // Batch Remove
-
-            // Debug move
-            if (Input.GetKeyDown(KeyCode.F1))
-                using (NativeArray<Entity> selectedEntities = currentSelected.ToEntityArray(Allocator.TempJob)) // Must be allocated as TempJob, because we're in a JobComponentSystem?
-                {
-                    EntityManager.AddComponent(selectedEntities, typeof(Heading));
-                    foreach (Entity entity in selectedEntities)
-                        EntityManager.SetComponentData(entity, new Heading { Value = new Unity.Mathematics.float3(1, 0, 0) });
-                }
         }
 
         /// <summary>
