@@ -5,6 +5,7 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
 using UnityEngine;
+using UnityEngine.Profiling;
 
 namespace ECSChess.Systems.UserInput
 {
@@ -16,14 +17,6 @@ namespace ECSChess.Systems.UserInput
     /// </summary>
     public class SelectionSystem : JobComponentSystem
     {
-        #region InnerClasses
-        /// <summary>
-        /// System that processes EntityCommands for the SelectionSystem
-        /// </summary>
-        [UpdateAfter(typeof(SelectionSystem))]
-        public class SelectionCommandBufferSystem : EntityCommandBufferSystem { }
-        #endregion
-
         #region Variables
         /// <summary>
         /// Camera used to process Mouse-Input
@@ -44,7 +37,7 @@ namespace ECSChess.Systems.UserInput
         /// <summary>
         /// CommandBufferSystem used to issue EntityCommands using an EntityCommandBuffer
         /// </summary>
-        private SelectionCommandBufferSystem commandBufferSystem;
+        private EndSimulationEntityCommandBufferSystem commandBufferSystem;
 
         #region NativeArrays
         /// <summary>
@@ -57,14 +50,14 @@ namespace ECSChess.Systems.UserInput
         #region Methods
         #region Unity
         /// <summary>
-        /// Runs when SelectionSystem is Created. Sets up EntityQueries & CommandBufferSystem
+        /// Runs when SelectionSystem is Created. Sets up EntityQueries & gets CommandBufferSystem
         /// </summary>
         protected override void OnCreateManager()
         {
-            commandBufferSystem = World.Active.GetOrCreateSystem<SelectionCommandBufferSystem>();
             selectables = GetEntityQuery(typeof(Selectable));
             currentHovered = GetEntityQuery(typeof(Hovered));
             currentSelected = GetEntityQuery(typeof(Selected));
+            commandBufferSystem = World.Active.GetOrCreateSystem<EndSimulationEntityCommandBufferSystem>();
             base.OnCreateManager();
         }
 
@@ -85,10 +78,13 @@ namespace ECSChess.Systems.UserInput
         /// <returns>JobHandle for final job</returns>
         protected override JobHandle OnUpdate(JobHandle inputDeps)
         {
+            Profiler.BeginSample("Init");
             inputDeps.Complete();
             if (camera == null)
                 camera = Camera.main;
             int amountOfIntersectables = selectables.CalculateLength();
+            Profiler.EndSample();
+            Profiler.BeginSample("Array");
             // Check if creation of (new) NativeArray is required
             if (!intersectionResults.IsCreated || !intersectionResults.Length.Equals(amountOfIntersectables))
             {
@@ -99,8 +95,11 @@ namespace ECSChess.Systems.UserInput
                 // Size of array should only go down during play
                 intersectionResults = new NativeArray<RayIntersectionResult>(amountOfIntersectables, Allocator.Persistent);
             }
+            Profiler.EndSample();
+            Profiler.BeginSample("KeyboardInput");
             // Handle Keyboard
             HandleKeyboardInput();
+            Profiler.EndSample();
             // Get position of Mouse on Screen
             Vector2 mousePos = Input.mousePosition;
             // Check whether MousePos is in Screen
@@ -148,13 +147,11 @@ namespace ECSChess.Systems.UserInput
             };
             // Schedule SortingJob with dependency on RaycastJob
             returnHandle = sortingJob.Schedule(returnHandle);
-            // Create Buffer to send EntityCommands to.
-            EntityCommandBuffer buffer = commandBufferSystem.CreateCommandBuffer();
             // Create SelectionJob
             SelectClosestIntersectionJob selectionJob = new SelectClosestIntersectionJob
             {
                 IntersectionResults = intersectionResults,
-                Buffer = buffer,
+                Buffer = commandBufferSystem.CreateCommandBuffer(),
                 Click = Input.GetMouseButtonDown(0),
                 Hovered = currentHovered.ToEntityArray(Allocator.TempJob), // Deallocated by Job itself
                 Selected = currentSelected.ToEntityArray(Allocator.TempJob) // Deallocated by Job itself
