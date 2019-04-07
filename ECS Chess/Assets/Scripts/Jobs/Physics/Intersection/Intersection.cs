@@ -7,7 +7,7 @@ using Unity.Mathematics;
 using Unity.Rendering;
 using UnityEngine;
 
-namespace ECSChess.Jobs
+namespace ECSChess.Jobs.Physics.Intersection
 {
     /// <summary>
     /// Checks for Intersection with a Ray, by using WorldRenderBounds

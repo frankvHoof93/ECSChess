@@ -1,11 +1,11 @@
 ﻿using ECSChess.Components.Input;
-using ECSChess.Jobs;
+using ECSChess.Components.Movement;
+using ECSChess.Jobs.Physics.Intersection;
 using ECSChess.Misc.DataTypes;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
 using UnityEngine;
-using UnityEngine.Profiling;
 
 namespace ECSChess.Systems.UserInput
 {
@@ -78,13 +78,10 @@ namespace ECSChess.Systems.UserInput
         /// <returns>JobHandle for final job</returns>
         protected override JobHandle OnUpdate(JobHandle inputDeps)
         {
-            Profiler.BeginSample("Init");
             inputDeps.Complete();
             if (camera == null)
                 camera = Camera.main;
             int amountOfIntersectables = selectables.CalculateLength();
-            Profiler.EndSample();
-            Profiler.BeginSample("Array");
             // Check if creation of (new) NativeArray is required
             if (!intersectionResults.IsCreated || !intersectionResults.Length.Equals(amountOfIntersectables))
             {
@@ -95,11 +92,8 @@ namespace ECSChess.Systems.UserInput
                 // Size of array should only go down during play
                 intersectionResults = new NativeArray<RayIntersectionResult>(amountOfIntersectables, Allocator.Persistent);
             }
-            Profiler.EndSample();
-            Profiler.BeginSample("KeyboardInput");
             // Handle Keyboard
             HandleKeyboardInput();
-            Profiler.EndSample();
             // Get position of Mouse on Screen
             Vector2 mousePos = Input.mousePosition;
             // Check whether MousePos is in Screen
@@ -119,8 +113,16 @@ namespace ECSChess.Systems.UserInput
             // Deselect
             if (Input.GetKeyDown(KeyCode.Escape) || Input.GetMouseButtonDown(1))
                 using (NativeArray<Entity> selectedEntities = currentSelected.ToEntityArray(Allocator.TempJob)) // Must be allocated as TempJob, because we're in a JobComponentSystem?
+                    EntityManager.RemoveComponent(selectedEntities, typeof(Selected)); // Batch Remove
+
+            // Debug move
+            if (Input.GetKeyDown(KeyCode.F1))
+                using (NativeArray<Entity> selectedEntities = currentSelected.ToEntityArray(Allocator.TempJob)) // Must be allocated as TempJob, because we're in a JobComponentSystem?
+                {
+                    EntityManager.AddComponent(selectedEntities, typeof(Heading));
                     foreach (Entity entity in selectedEntities)
-                        EntityManager.RemoveComponent(entity, typeof(Selected));
+                        EntityManager.SetComponentData(entity, new Heading { Value = new Unity.Mathematics.float3(1, 0, 0) });
+                }
         }
 
         /// <summary>
@@ -131,11 +133,7 @@ namespace ECSChess.Systems.UserInput
         /// <returns>Output-Dependencies for Jobs</returns>
         private JobHandle HandleMouseInput(JobHandle inputDeps, Vector2 mousePos)
         {
-            Profiler.BeginSample("MouseInput");
-            Profiler.BeginSample("ScreenPointToRay");
             Ray r = camera.ScreenPointToRay(mousePos);
-            Profiler.EndSample();
-            Profiler.BeginSample("RayCastJob");
             // Create RaycastJob (Parallel)
             RayCastJob<Selectable> jobRayCast = new RayCastJob<Selectable>
             {
@@ -144,8 +142,6 @@ namespace ECSChess.Systems.UserInput
             };
             // Schedule RaycastJob
             JobHandle returnHandle = jobRayCast.Schedule(this, inputDeps);
-            Profiler.EndSample();
-            Profiler.BeginSample("SortingJob");
             // Create SortingJob (Not Parallel)
             SortIntersectionJob sortingJob = new SortIntersectionJob
             {
@@ -153,13 +149,12 @@ namespace ECSChess.Systems.UserInput
             };
             // Schedule SortingJob with dependency on RaycastJob
             returnHandle = sortingJob.Schedule(returnHandle);
-            Profiler.EndSample();
-            Profiler.BeginSample("ToEntityArray");
+            // Create EntityArrays for Hovered & Selected, to be used in SelectClosestIntersectionJob
+            // The 'Create' is performed in its own Job, and the OUT Jobhandles can be used as dependecies for when the Arrays are required
             NativeArray<Entity> hovered = currentHovered.ToEntityArray(Allocator.TempJob, out JobHandle gatherHovered);
-            NativeArray<Entity> selected = currentHovered.ToEntityArray(Allocator.TempJob, out JobHandle gatherSelected);
+            NativeArray<Entity> selected = currentSelected.ToEntityArray(Allocator.TempJob, out JobHandle gatherSelected);
+            // Combine Dependencies for SelectionJob
             returnHandle = JobHandle.CombineDependencies(returnHandle, gatherHovered, gatherSelected);
-            Profiler.EndSample();
-            Profiler.BeginSample("SelectClosestJob");
             // Create SelectionJob
             SelectClosestIntersectionJob selectionJob = new SelectClosestIntersectionJob
             {
@@ -169,14 +164,10 @@ namespace ECSChess.Systems.UserInput
                 Hovered = hovered, // Deallocated by Job itself
                 Selected = selected // Deallocated by Job itself
             };
-            // Create final handle (SelectionJob with dependency on SortingJob)
+            // Create final handle (SelectionJob with dependency on SortingJob & Creates)
             returnHandle = selectionJob.Schedule(returnHandle);
-            Profiler.EndSample();
-            Profiler.BeginSample("CommandBuffer");
-            // Add dependency to buffer
+            // Add dependency to commandbuffer
             commandBufferSystem.AddJobHandleForProducer(returnHandle);
-            Profiler.EndSample();
-            Profiler.EndSample();
             return returnHandle;
         }
         #endregion

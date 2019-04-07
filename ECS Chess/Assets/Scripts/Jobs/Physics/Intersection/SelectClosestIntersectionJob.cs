@@ -5,7 +5,7 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
 
-namespace ECSChess.Jobs
+namespace ECSChess.Jobs.Physics.Intersection
 {
     /// <summary>
     /// Job that selects the First RayIntersectionResult in an Array
