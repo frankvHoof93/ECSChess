@@ -16,6 +16,12 @@ namespace ECSChess.Systems
     /// </summary>
     public class SelectionSystem : JobComponentSystem
     {
+        /// <summary>
+        /// System that processes EntityCommands for the SelectionSystem
+        /// </summary>
+        [UpdateAfter(typeof(SelectionSystem))]
+        public class SelectionCommandBufferSystem : EntityCommandBufferSystem { }
+
         #region Variables
         /// <summary>
         /// Camera used to process Mouse-Input
@@ -25,6 +31,18 @@ namespace ECSChess.Systems
         /// Query of all Selectable Entities
         /// </summary>
         private EntityQuery selectables;
+        /// <summary>
+        /// Query of all currently Hovered Entities
+        /// </summary>
+        private EntityQuery currentHovered;
+        /// <summary>
+        /// Query of all currently Selected Entities
+        /// </summary>
+        private EntityQuery currentSelected;
+        /// <summary>
+        /// CommandBufferSystem used to issue EntityCommands using an EntityCommandBuffer
+        /// </summary>
+        private SelectionCommandBufferSystem commandBufferSystem;
 
         #region NativeArrays
         /// <summary>
@@ -36,20 +54,19 @@ namespace ECSChess.Systems
 
         #region Methods
         /// <summary>
-        /// Runs when SelectionSystem is Created. Sets up EntityQuery
+        /// Runs when SelectionSystem is Created. Sets up EntityQueries & CommandBufferSystem
         /// </summary>
         protected override void OnCreateManager()
         {
-            EntityQueryDesc query = new EntityQueryDesc
-            {
-                All = new ComponentType[] { typeof(Selectable) }
-            };
-            selectables = GetEntityQuery(query);
+            commandBufferSystem = World.Active.GetOrCreateSystem<SelectionCommandBufferSystem>();
+            selectables = GetEntityQuery(typeof(Selectable));
+            currentHovered = GetEntityQuery(typeof(Hovered));
+            currentSelected = GetEntityQuery(typeof(Selected));
             base.OnCreateManager();
         }
 
         /// <summary>
-        /// Runs when SelectionSystem is Destroyed. Cleans up NativeArray
+        /// Runs when SelectionSystem is Destroyed. Cleans up NativeArrays
         /// </summary>
         protected override void OnDestroyManager()
         {
@@ -65,6 +82,7 @@ namespace ECSChess.Systems
         /// <returns>JobHandle for final job</returns>
         protected override JobHandle OnUpdate(JobHandle inputDeps)
         {
+            inputDeps.Complete();
             if (camera == null)
                 camera = Camera.main;
             int amountOfIntersectables = selectables.CalculateLength();
@@ -100,8 +118,21 @@ namespace ECSChess.Systems
                 };
                 // Schedule SortingJob with dependency on RaycastJob
                 returnHandle = sortingJob.Schedule(returnHandle);
-
-                // Return final handle
+                // Create Buffer to send EntityCommands to.
+                EntityCommandBuffer buffer = commandBufferSystem.CreateCommandBuffer();
+                // Create SelectionJob
+                SelectClosestIntersectionJob selectionJob = new SelectClosestIntersectionJob
+                {
+                    IntersectionResults = intersectionResults,
+                    Buffer = buffer,
+                    Click = Input.GetMouseButtonDown(0),
+                    Hovered = currentHovered.ToEntityArray(Allocator.TempJob), // Deallocated by Job itself
+                    Selected = currentSelected.ToEntityArray(Allocator.TempJob) // Deallocated by Job itself
+                };
+                // Create final handle (SelectionJob with dependency on SortingJob)
+                returnHandle = selectionJob.Schedule(returnHandle);
+                // Add dependency to buffer
+                commandBufferSystem.AddJobHandleForProducer(returnHandle);
                 return returnHandle;
             }
             else return inputDeps; // Nothing to do, return inputDeps

@@ -30,7 +30,8 @@ namespace ECSChess.Jobs
         public void Execute([ReadOnly]Entity entity, [ReadOnly]int index, [ReadOnly]ref WorldRenderBounds c0)
         {
             bool result = c0.Value.ToBounds().IntersectRay(Ray, out float distance);
-            Results[index] = new RayIntersectionResult { Intersection = result, Distance = distance, Entity = entity };
+            // Set distance to Float.MaxValue if there was no intersection
+            Results[index] = new RayIntersectionResult { Intersection = result, Distance = result ? distance : float.MaxValue, Entity = entity };
         }
     }
 
@@ -56,8 +57,6 @@ namespace ECSChess.Jobs
         public void Execute([ReadOnly]Entity entity, [ReadOnly]int index, [ReadOnly]ref WorldRenderBounds c0, [ReadOnly]ref T c1)
         {
             bool result = c0.Value.ToBounds().IntersectRay(Ray, out float distance);
-            if (result)
-                Debug.Log("Intersection found with: " + World.Active.EntityManager.GetName(entity));
             // Set distance to Float.MaxValue if there was no intersection
             Results[index] = new RayIntersectionResult { Intersection = result, Distance = result ? distance : float.MaxValue, Entity = entity };
         }
@@ -95,7 +94,6 @@ namespace ECSChess.Jobs
                 }
                 Array[inner] = temp;
             }
-            Debug.Log("Intersection 0: " + Array[0].ToString());
         }
     }
 }
