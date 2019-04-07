@@ -1,5 +1,4 @@
-﻿using System;
-using ECSChess.Components.Input;
+﻿using ECSChess.Components.Input;
 using ECSChess.Jobs;
 using ECSChess.Misc.DataTypes;
 using Unity.Collections;
@@ -7,7 +6,7 @@ using Unity.Entities;
 using Unity.Jobs;
 using UnityEngine;
 
-namespace ECSChess.Systems
+namespace ECSChess.Systems.UserInput
 {
     /// <summary>
     /// System used to Select a ChessPiece
@@ -17,11 +16,13 @@ namespace ECSChess.Systems
     /// </summary>
     public class SelectionSystem : JobComponentSystem
     {
+        #region InnerClasses
         /// <summary>
         /// System that processes EntityCommands for the SelectionSystem
         /// </summary>
         [UpdateAfter(typeof(SelectionSystem))]
         public class SelectionCommandBufferSystem : EntityCommandBufferSystem { }
+        #endregion
 
         #region Variables
         /// <summary>
@@ -108,7 +109,12 @@ namespace ECSChess.Systems
                 return HandleMouseInput(inputDeps, mousePos); // Handle Mouse
             else return inputDeps; // Nothing to do, return inputDeps
         }
+        #endregion
 
+        #region Private
+        /// <summary>
+        /// Handles KeyboardInput (For Deselection)
+        /// </summary>
         private void HandleKeyboardInput()
         {
             // Deselect
@@ -117,9 +123,13 @@ namespace ECSChess.Systems
                     foreach (Entity entity in selectedEntities)
                         EntityManager.RemoveComponent(entity, typeof(Selected));
         }
-        #endregion
 
-        #region Private
+        /// <summary>
+        /// Handles MouseInput (for Hovering & Selection)
+        /// </summary>
+        /// <param name="inputDeps">InputDependencies for Jobs</param>
+        /// <param name="mousePos">MousePosition on Screen</param>
+        /// <returns>Output-Dependencies for Jobs</returns>
         private JobHandle HandleMouseInput(JobHandle inputDeps, Vector2 mousePos)
         {
             Ray r = camera.ScreenPointToRay(mousePos);

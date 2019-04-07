@@ -1,9 +1,15 @@
-﻿using Unity.Entities;
+﻿using System;
+using Unity.Entities;
 
 namespace ECSChess.Misc.DataTypes
 {
+    /// <summary>
+    /// A RayIntersectionResult holds the result of checking a Raycast against an Entity
+    /// </summary>
+    [Serializable]
     public struct RayIntersectionResult
     {
+        #region Variables
         /// <summary>
         /// Whether an Intersection occured
         /// <para>
@@ -23,18 +29,27 @@ namespace ECSChess.Misc.DataTypes
         /// Entity which was Intersected
         /// </summary>
         public Entity Entity;
+        #endregion
 
-        public static readonly RayIntersectionResult INVALID = new RayIntersectionResult { Distance = float.MaxValue };
-
+        #region Methods
+        #region Operators
+        /// <summary>
+        /// Implicit Cast from RayIntersectionResult to Boolean (by Value)
+        /// </summary>
+        /// <param name="res">RayIntersectionResult to Cast</param>
         public static implicit operator bool(RayIntersectionResult res) => res.Value;
+        #endregion
 
+        #region Overrides
         /// <summary>
         /// String-Representation of RayIntersectionResult
         /// </summary>
-        /// <returns></returns>
+        /// <returns>Entity: [E], Intersection: [I], Distance: [D]</returns>
         public override string ToString()
         {
-            return string.Format("Entity: [{0}], Intersection: [{1}], Distance: [{2}]", World.Active.EntityManager.GetName(Entity), Value.ToString(), Distance.ToString());
+            return string.Format("Entity: [{0}], Intersection: [{1}], Distance: [{2}]", World.Active.EntityManager.GetName(Entity), Value, Distance);
         }
+        #endregion
+        #endregion
     }
 }

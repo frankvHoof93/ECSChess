@@ -1,5 +1,6 @@
 ﻿using ECSChess.Components.Chess;
 using ECSChess.Components.Input;
+using ECSChess.Misc.DataTypes;
 using ECSChess.Misc.Enums;
 using System;
 using System.Collections.Generic;
@@ -56,9 +57,8 @@ namespace ECSChess.Bootstraps
                 typeof(RenderMesh), // Render-Data
                 typeof(WorldRenderBounds), typeof(Selectable)); // Collision-Data 
             boardTileArchetype = entityManager.CreateArchetype(
-                typeof(Translation), typeof(Rotation),
-                typeof(RenderMesh),
-                typeof(LocalToWorld));
+                typeof(LocalToWorld), typeof(Translation), typeof(Rotation), typeof(Tile), // Position-Data
+                typeof(RenderMesh)); // Render-Data
         }
 
         /// <summary>
@@ -126,9 +126,11 @@ namespace ECSChess.Bootstraps
                     Entity pieceEntity = mgr.CreateEntity(boardTileArchetype);
                     mgr.SetComponentData(pieceEntity, new Translation { Value = new float3(x, 0, z) });
                     mgr.SetComponentData(pieceEntity, new Rotation { Value = rotation });
+                    ChessPosition pos = new ChessPosition(new int2(x, z));
+                    mgr.SetComponentData(pieceEntity, new Tile(pos));
                     mgr.SetSharedComponentData(pieceEntity, black ? blackInfo : whiteInfo);
 #if UNITY_EDITOR
-                    mgr.SetName(pieceEntity, string.Format("BoardTile-{0}_{1}", x, z)); // Set name to be shown in EntityDebugger
+                    mgr.SetName(pieceEntity, string.Format("BoardTile-{0}", pos)); // Set name to be shown in EntityDebugger
 #endif
                     black = !black;
                 }

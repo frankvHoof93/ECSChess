@@ -8,5 +8,5 @@ namespace ECSChess.Components.Input
     /// </summary>
     [Serializable]
     public struct Selected : IComponentData
-    { }
+    {}
 }

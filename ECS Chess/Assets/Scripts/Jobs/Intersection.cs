@@ -16,6 +16,7 @@ namespace ECSChess.Jobs
     [BurstCompile]
     public struct RayCastJob : IJobForEachWithEntity<WorldRenderBounds>
     {
+        #region Variables
         /// <summary>
         /// Ray to intersect with
         /// </summary>
@@ -26,7 +27,14 @@ namespace ECSChess.Jobs
         /// </summary>
         [WriteOnly]
         public NativeArray<RayIntersectionResult> Results;
+        #endregion
 
+        /// <summary>
+        /// Intersects Bounds with Ray
+        /// </summary>
+        /// <param name="entity">Entity for Bounds</param>
+        /// <param name="index">Index for Job (parallel)</param>
+        /// <param name="c0">WorldRenderBounds for Entity</param>
         public void Execute([ReadOnly]Entity entity, [ReadOnly]int index, [ReadOnly]ref WorldRenderBounds c0)
         {
             bool result = c0.Value.ToBounds().IntersectRay(Ray, out float distance);
@@ -43,6 +51,7 @@ namespace ECSChess.Jobs
     [BurstCompile]
     public struct RayCastJob<T> : IJobForEachWithEntity<WorldRenderBounds, T> where T : struct, IComponentData
     {
+        #region Variables
         /// <summary>
         /// Ray to intersect with
         /// </summary>
@@ -53,7 +62,15 @@ namespace ECSChess.Jobs
         /// </summary>
         [WriteOnly]
         public NativeArray<RayIntersectionResult> Results;
+        #endregion
 
+        /// <summary>
+        /// Intersects Bounds with Ray
+        /// </summary>
+        /// <param name="entity">Entity for Bounds</param>
+        /// <param name="index">Index for Job (parallel)</param>
+        /// <param name="c0">WorldRenderBounds for Entity</param>
+        /// <param name="c1">Filter-Tag for Entity</param>
         public void Execute([ReadOnly]Entity entity, [ReadOnly]int index, [ReadOnly]ref WorldRenderBounds c0, [ReadOnly]ref T c1)
         {
             bool result = c0.Value.ToBounds().IntersectRay(Ray, out float distance);
@@ -68,10 +85,12 @@ namespace ECSChess.Jobs
     [BurstCompile]
     public struct SortIntersectionJob : IJob
     {
+        #region Variables
         /// <summary>
         /// INOUT: Array to Sort
         /// </summary>
         public NativeArray<RayIntersectionResult> Array;
+        #endregion
 
         /// <summary>
         /// Insertion Sort on Array
