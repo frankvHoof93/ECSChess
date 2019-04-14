@@ -10,19 +10,22 @@ namespace ECSChess.Components.Movement
     [Serializable]
     public struct Destination : IComponentData
     {
+        #region Variables
         /// <summary>
         /// Position for Destination
         /// </summary>
-        public float3 Value;
+        public readonly float3 Value;
         /// <summary>
         /// Maximum distance to Destination to have to have 'arrived'
         /// </summary>
-        public float Distance;
+        public readonly float Distance;
         /// <summary>
         /// Whether to 'Snap' to Destination when 'arrived' (Set Translation to Destination)
         /// </summary>
-        public bool Snap;
+        public readonly bool Snap;
+        #endregion
 
+        #region Constructors
         /// <summary>
         /// Constructor for a Destination
         /// </summary>
@@ -35,5 +38,6 @@ namespace ECSChess.Components.Movement
             Distance = distance;
             Snap = snap;
         }
+        #endregion
     }
 }

@@ -1,6 +1,7 @@
 ﻿using ECSChess.Components.Input;
-using ECSChess.Components.Movement;
+using ECSChess.Jobs.Misc;
 using ECSChess.Jobs.Physics.Intersection;
+using ECSChess.Jobs.Selection;
 using ECSChess.Misc.DataTypes;
 using Unity.Collections;
 using Unity.Entities;
@@ -100,7 +101,7 @@ namespace ECSChess.Systems.UserInput
             if (mousePos.x >= 0 && mousePos.x <= Screen.width
                 && mousePos.y >= 0 && mousePos.y <= Screen.height)
                 return HandleMouseInput(inputDeps, mousePos); // Handle Mouse
-            else return inputDeps; // Nothing to do, return inputDeps
+            else return inputDeps; // Nothing else to do, return inputDeps
         }
         #endregion
 
@@ -124,22 +125,16 @@ namespace ECSChess.Systems.UserInput
         /// <returns>Output-Dependencies for Jobs</returns>
         private JobHandle HandleMouseInput(JobHandle inputDeps, Vector2 mousePos)
         {
+            // Create Ray for Raycast
             Ray r = camera.ScreenPointToRay(mousePos);
             // Create RaycastJob (Parallel)
-            RayCastJob<Selectable> jobRayCast = new RayCastJob<Selectable>
-            {
-                Ray = r,
-                Results = intersectionResults
-            };
+            RayCastJob<Selectable> jobRayCast = new RayCastJob<Selectable>(r, intersectionResults);
             // Schedule RaycastJob
             JobHandle returnHandle = jobRayCast.Schedule(this, inputDeps);
             // Create SortingJob (Not Parallel)
-            SortIntersectionJob sortingJob = new SortIntersectionJob
-            {
-                Array = intersectionResults
-            };
+            InsertionSortJob<RayIntersectionResult> sortJob = new InsertionSortJob<RayIntersectionResult>(intersectionResults);
             // Schedule SortingJob with dependency on RaycastJob
-            returnHandle = sortingJob.Schedule(returnHandle);
+            returnHandle = sortJob.Schedule(returnHandle);
             // Create EntityArrays for Hovered & Selected, to be used in SelectClosestIntersectionJob
             // The 'Create' is performed in its own Job, and the OUT Jobhandles can be used as dependecies for when the Arrays are required
             NativeArray<Entity> hovered = currentHovered.ToEntityArray(Allocator.TempJob, out JobHandle gatherHovered);
@@ -147,14 +142,7 @@ namespace ECSChess.Systems.UserInput
             // Combine Dependencies for SelectionJob
             returnHandle = JobHandle.CombineDependencies(returnHandle, gatherHovered, gatherSelected);
             // Create SelectionJob
-            SelectClosestIntersectionJob selectionJob = new SelectClosestIntersectionJob
-            {
-                IntersectionResults = intersectionResults,
-                Buffer = commandBufferSystem.CreateCommandBuffer(),
-                Click = Input.GetMouseButtonDown(0),
-                Hovered = hovered, // Deallocated by Job itself
-                Selected = selected // Deallocated by Job itself
-            };
+            SelectClosestIntersectionJob selectionJob = new SelectClosestIntersectionJob(intersectionResults, hovered, selected, Input.GetMouseButtonDown(0), commandBufferSystem.CreateCommandBuffer());
             // Create final handle (SelectionJob with dependency on SortingJob & Creates)
             returnHandle = selectionJob.Schedule(returnHandle);
             // Add dependency to commandbuffer

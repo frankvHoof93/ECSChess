@@ -15,6 +15,7 @@ namespace ECSChess.Systems.Movement
         /// </summary>
         private EndSimulationEntityCommandBufferSystem commandBufferSystem;
 
+        #region Methods
         /// <summary>
         /// Grabs reference to CommandBufferSystem
         /// </summary>
@@ -31,16 +32,16 @@ namespace ECSChess.Systems.Movement
         /// <returns>OutputDependencies</returns>
         protected override JobHandle OnUpdate(JobHandle inputDeps)
         {
+            // Grab Destinations (Where applicable)
             ComponentDataFromEntity<Destination> destinations = GetComponentDataFromEntity<Destination>(true);
-            TranslationJob job = new TranslationJob
-            {
-                destinations = destinations,
-                dT = Time.deltaTime,
-                buffer = commandBufferSystem.CreateCommandBuffer().ToConcurrent()
-            };
+            // Create TranslationJob
+            TranslationJob job = new TranslationJob(Time.deltaTime, destinations, commandBufferSystem.CreateCommandBuffer().ToConcurrent());
+            // Schedule Job
             JobHandle returnHandle = job.Schedule(this, inputDeps);
+            // Add JobHandle to producer of CommandBuffer
             commandBufferSystem.AddJobHandleForProducer(returnHandle);
             return returnHandle;
         }
+        #endregion
     }
 }

@@ -16,20 +16,35 @@ namespace ECSChess.Jobs.Physics.Movement
     {
         #region Variables
         /// <summary>
-        /// delta-T (TimeSpan)
+        /// Timespan
         /// </summary>
         [ReadOnly]
-        public float dT;
+        private readonly float deltaT;
         /// <summary>
         /// Destinations for Entities (Where applicable)
         /// </summary>
         [ReadOnly]
-        public ComponentDataFromEntity<Destination> destinations;
+        private readonly ComponentDataFromEntity<Destination> destinations;
         /// <summary>
-        /// CommandBuffer for Add-/Remove-Commands
+        /// CommandBuffer for Removing Heading & Destination when destination is reached
         /// </summary>
         [ReadOnly]
-        public EntityCommandBuffer.Concurrent buffer;
+        private readonly EntityCommandBuffer.Concurrent buffer;
+        #endregion
+
+        #region Constructors
+        /// <summary>
+        /// Constructor for a TranslationJob
+        /// </summary>
+        /// <param name="dT">Delta-Time for Translation (Timespan)</param>
+        /// <param name="dest">Destinations for Entities (Where applicable)</param>
+        /// <param name="cmd">CommandBuffer for Removing Heading & Destination when destination is reached</param>
+        public TranslationJob(float dT, ComponentDataFromEntity<Destination> dest, EntityCommandBuffer.Concurrent cmd)
+        {
+            deltaT = dT;
+            destinations = dest;
+            buffer = cmd;
+        }
         #endregion
 
         #region Methods
@@ -46,12 +61,12 @@ namespace ECSChess.Jobs.Physics.Movement
         public void Execute(Entity entity, int index, ref Translation c0, [ReadOnly]ref Heading c1)
         {
             if (!destinations.Exists(entity)) // Entity does not have Destination
-                Move(ref c0, c1, dT);
+                Move(ref c0, c1, deltaT);
             else // Handle movement with Destination
             {
                 Destination dest = destinations[entity];
                 if (math.distance(c0.Value, dest.Value) > dest.Distance)
-                    Move(ref c0, c1, dT); // Destination not reached. Perform regular movement
+                    Move(ref c0, c1, deltaT); // Destination not reached. Perform regular movement
                 else
                 {
                     if (dest.Snap) // Snap to destination
@@ -71,10 +86,10 @@ namespace ECSChess.Jobs.Physics.Movement
         /// </summary>
         /// <param name="c0">ref: Translation to modify</param>
         /// <param name="c1">Movement to perform (Heading with Speed)</param>
-        /// <param name="dT">TimeSpan for Movement</param>
+        /// <param name="dT">Timespan for Movement</param>
         private void Move(ref Translation c0, Heading c1, float dT)
         {
-            c0.Value = c0.Value + c1.Value * dT;
+            c0.Value += c1.Value * dT;
         }
         #endregion
     }

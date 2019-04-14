@@ -70,28 +70,7 @@ namespace ECSChess.Bootstraps
             EntityManager mgr = World.Active.EntityManager;
             SpawnChessBoard(mgr);
             foreach (ChessTeam team in Enum.GetValues(typeof(ChessTeam)))
-            {
-                quaternion rotation = team.Equals(ChessTeam.White) ? Quaternion.identity : Quaternion.Euler(0, 180, 0);
-                float y = 0;
-                float z = team.Equals(ChessTeam.White) ? 0 : 7;
-                // 1 King
-                SpawnChessPiece(mgr, team, ChessPiece.King, new float3(4, y, z), rotation);
-                // 1 Queen
-                SpawnChessPiece(mgr, team, ChessPiece.Queen, new float3(3, y, z), rotation);
-                // 2 Rooks
-                SpawnChessPiece(mgr, team, ChessPiece.Rook, new float3(0, y, z), rotation);
-                SpawnChessPiece(mgr, team, ChessPiece.Rook, new float3(7, y, z), rotation);
-                // 2 Bishops
-                SpawnChessPiece(mgr, team, ChessPiece.Bishop, new float3(2, y, z), rotation);
-                SpawnChessPiece(mgr, team, ChessPiece.Bishop, new float3(5, y, z), rotation);
-                // 2 Knights
-                SpawnChessPiece(mgr, team, ChessPiece.Knight, new float3(1, y, z), rotation);
-                SpawnChessPiece(mgr, team, ChessPiece.Knight, new float3(6, y, z), rotation);
-                // 8 Pawns
-                z = team.Equals(ChessTeam.White) ? 1 : 6;
-                for (int i = 0; i < 8; i++)
-                    SpawnChessPiece(mgr, team, ChessPiece.Pawn, new float3(i, y, z), rotation);
-            }
+                SpawnChessTeam(mgr, team);
         }
         #endregion
 
@@ -136,6 +115,35 @@ namespace ECSChess.Bootstraps
                 }
                 black = !black;
             }
+        }
+
+        /// <summary>
+        /// Spawns all Pieces for a ChessTeam
+        /// </summary>
+        /// <param name="mgr">EntityManager used for spawning</param>
+        /// <param name="team">Team to spawn for</param>
+        private static void SpawnChessTeam(EntityManager mgr, ChessTeam team)
+        {
+            quaternion rotation = team.Equals(ChessTeam.White) ? Quaternion.identity : Quaternion.Euler(0, 180, 0);
+            int y = 0;
+            int z = team.Equals(ChessTeam.White) ? 0 : 7;
+            // 1 King
+            SpawnChessPiece(mgr, team, ChessPiece.King, new float3(4, y, z), rotation);
+            // 1 Queen
+            SpawnChessPiece(mgr, team, ChessPiece.Queen, new float3(3, y, z), rotation);
+            // 2 Rooks
+            SpawnChessPiece(mgr, team, ChessPiece.Rook, new float3(0, y, z), rotation);
+            SpawnChessPiece(mgr, team, ChessPiece.Rook, new float3(7, y, z), rotation);
+            // 2 Bishops
+            SpawnChessPiece(mgr, team, ChessPiece.Bishop, new float3(2, y, z), rotation);
+            SpawnChessPiece(mgr, team, ChessPiece.Bishop, new float3(5, y, z), rotation);
+            // 2 Knights
+            SpawnChessPiece(mgr, team, ChessPiece.Knight, new float3(1, y, z), rotation);
+            SpawnChessPiece(mgr, team, ChessPiece.Knight, new float3(6, y, z), rotation);
+            // 8 Pawns
+            z = team.Equals(ChessTeam.White) ? 1 : 6;
+            for (int i = 0; i < 8; i++)
+                SpawnChessPiece(mgr, team, ChessPiece.Pawn, new float3(i, y, z), rotation);
         }
 
         /// <summary>

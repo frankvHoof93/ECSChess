@@ -16,8 +16,9 @@ namespace ECSChess.Systems.UserInput
         /// <summary>
         /// Selected Entities
         /// </summary>
-        EntityQuery selected;
+        private EntityQuery selected;
 
+        #region Methods
         /// <summary>
         /// Initializes EntityQuery
         /// </summary>
@@ -38,14 +39,14 @@ namespace ECSChess.Systems.UserInput
                 {
                     EntityManager.AddComponent(selectedEntities, typeof(Heading));
                     foreach (Entity entity in selectedEntities)
-                        EntityManager.SetComponentData(entity, new Heading { Value = new Unity.Mathematics.float3(1, 0, 0) });
+                        EntityManager.SetComponentData(entity, new Heading { Value = new float3(1, 0, 0) });
                 }
             // Debug Move with Destination
             if (Input.GetKeyDown(KeyCode.F2))
                 using (NativeArray<Entity> selectedEntities = selected.ToEntityArray(Allocator.TempJob)) // Must be allocated as TempJob, because we're in a JobComponentSystem?
                 using (NativeArray<Translation> translations = selected.ToComponentDataArray<Translation>(Allocator.TempJob))
                 {
-                    Destination dest = new Destination { Value = new float3(4, 0, 4), Snap = true, Distance = .1f };
+                    Destination dest = new Destination(new float3(4, 0, 4), .1f, true);
                     EntityManager.AddComponent(selectedEntities, typeof(Heading));
                     EntityManager.AddComponent(selectedEntities, typeof(Destination));
                     EntityManager.RemoveComponent(selectedEntities, typeof(Selected));
@@ -53,7 +54,7 @@ namespace ECSChess.Systems.UserInput
                     for (int i = 0; i < selectedEntities.Length; i++)
                     {
                         float3 pos = translations[i].Value;
-                        Heading h = new Heading { Value = dest.Value - pos };
+                        Heading h = new Heading(dest.Value - pos);
                         float dist = h.Mag; // Distance to Destination
                         float speed = dist / duration; // Set Speed
                         h.Mag = speed;
@@ -62,5 +63,6 @@ namespace ECSChess.Systems.UserInput
                     }
                 }
         }
+        #endregion
     }
 }

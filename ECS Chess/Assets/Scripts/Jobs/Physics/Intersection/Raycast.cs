@@ -2,7 +2,6 @@
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Rendering;
 using UnityEngine;
@@ -21,14 +20,28 @@ namespace ECSChess.Jobs.Physics.Intersection
         /// Ray to intersect with
         /// </summary>
         [ReadOnly]
-        public Ray Ray;
+        private readonly Ray Ray;
         /// <summary>
         /// OUT: Results for intersections
         /// </summary>
         [WriteOnly]
-        public NativeArray<RayIntersectionResult> Results;
+        private NativeArray<RayIntersectionResult> Results;
         #endregion
 
+        #region Constructors
+        /// <summary>
+        /// Constructor for a RaycastJob
+        /// </summary>
+        /// <param name="r">Ray to check against</param>
+        /// <param name="outputArray">Array for Outputs</param>
+        public RayCastJob(Ray r, NativeArray<RayIntersectionResult> outputArray)
+        {
+            Ray = r;
+            Results = outputArray;
+        }
+        #endregion
+
+        #region Methods
         /// <summary>
         /// Intersects Bounds with Ray
         /// </summary>
@@ -39,15 +52,16 @@ namespace ECSChess.Jobs.Physics.Intersection
         {
             bool result = c0.Value.ToBounds().IntersectRay(Ray, out float distance);
             // Set distance to Float.MaxValue if there was no intersection
-            Results[index] = new RayIntersectionResult { Intersection = result, Distance = result ? distance : float.MaxValue, Entity = entity };
+            Results[index] = new RayIntersectionResult(result, result ? distance : float.MaxValue, entity);
         }
+        #endregion
     }
 
     /// <summary>
     /// Checks for Intersection with a Ray, by using WorldRenderBounds
     /// TODO: Use Mesh instead, so raycast is actually accurate (instead of using a box around the object)
     /// </summary>
-    /// <typeparam name="T">Used to filter on Entities by a single (Tag-)Component</typeparam>
+    /// <typeparam name="T">Used to filter on Entities by a (Tag-)Component</typeparam>
     [BurstCompile]
     public struct RayCastJob<T> : IJobForEachWithEntity<WorldRenderBounds, T> where T : struct, IComponentData
     {
@@ -56,14 +70,28 @@ namespace ECSChess.Jobs.Physics.Intersection
         /// Ray to intersect with
         /// </summary>
         [ReadOnly]
-        public Ray Ray;
+        private readonly Ray Ray;
         /// <summary>
         /// OUT: Results for intersections
         /// </summary>
         [WriteOnly]
-        public NativeArray<RayIntersectionResult> Results;
+        private NativeArray<RayIntersectionResult> Results;
         #endregion
 
+        #region Constructors
+        /// <summary>
+        /// Constructor for a RaycastJob
+        /// </summary>
+        /// <param name="r">Ray to check against</param>
+        /// <param name="outputArray">Array for Outputs</param>
+        public RayCastJob(Ray r, NativeArray<RayIntersectionResult> outputArray)
+        {
+            Ray = r;
+            Results = outputArray;
+        }
+        #endregion
+
+        #region Methods
         /// <summary>
         /// Intersects Bounds with Ray
         /// </summary>
@@ -75,44 +103,8 @@ namespace ECSChess.Jobs.Physics.Intersection
         {
             bool result = c0.Value.ToBounds().IntersectRay(Ray, out float distance);
             // Set distance to Float.MaxValue if there was no intersection
-            Results[index] = new RayIntersectionResult { Intersection = result, Distance = result ? distance : float.MaxValue, Entity = entity };
+            Results[index] = new RayIntersectionResult(result, result ? distance : float.MaxValue, entity);
         }
-    }
-
-    /// <summary>
-    /// Sorts Array of IntersectionResults by Distance
-    /// </summary>
-    [BurstCompile]
-    public struct SortIntersectionJob : IJob
-    {
-        #region Variables
-        /// <summary>
-        /// INOUT: Array to Sort
-        /// </summary>
-        public NativeArray<RayIntersectionResult> Array;
         #endregion
-
-        /// <summary>
-        /// Insertion Sort on Array
-        /// </summary>
-        public void Execute()
-        {
-            // Insertion sort on array
-            int inner;
-            RayIntersectionResult temp;
-            for (int outer = 1; outer < Array.Length; outer++)
-            {
-                if (!Array[outer])
-                    continue; // No intersection. Skip
-                temp = Array[outer];
-                inner = outer;
-                while (inner > 0 && Array[inner - 1].Distance >= temp.Distance || (!temp && Array[inner - 1]))
-                {
-                    Array[inner] = Array[inner - 1];
-                    inner -= 1;
-                }
-                Array[inner] = temp;
-            }
-        }
     }
 }

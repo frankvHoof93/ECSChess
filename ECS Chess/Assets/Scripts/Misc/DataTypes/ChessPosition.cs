@@ -18,7 +18,7 @@ namespace ECSChess.Misc.DataTypes
         /// </summary>
         public int2 Value
         {
-            get { return value; }
+            get => value;
             set
             {
                 if (!IsValid(value))
@@ -26,19 +26,18 @@ namespace ECSChess.Misc.DataTypes
                 this.value = value;
             }
         }
-
         /// <summary>
         /// Column for Position (A-H)
         /// </summary>
-        public TileLetter FileLetter { get { return (TileLetter)value.x; } }
+        public TileLetter FileLetter => (TileLetter)value.x;
         /// <summary>
         /// Column for Position (1-8)
         /// </summary>
-        public int File { get { return value.x + 1; } }
+        public int File => value.x + 1; // +1 for Indexing-Offset
         /// <summary>
         /// Row for Position (1-8)
         /// </summary>
-        public int Rank { get { return value.y + 1; } }
+        public int Rank => value.y + 1; // +1 for Indexing-Offset
         #endregion
 
         #region Private
