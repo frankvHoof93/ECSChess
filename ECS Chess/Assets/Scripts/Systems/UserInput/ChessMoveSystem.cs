@@ -37,6 +37,7 @@ namespace ECSChess.Systems.UserInput
             if (Input.GetKeyDown(KeyCode.F1))
                 using (NativeArray<Entity> selectedEntities = selected.ToEntityArray(Allocator.TempJob)) // Must be allocated as TempJob, because we're in a JobComponentSystem?
                 {
+                    EntityManager.RemoveComponent(selectedEntities, typeof(Frozen));
                     EntityManager.AddComponent(selectedEntities, typeof(Heading));
                     foreach (Entity entity in selectedEntities)
                         EntityManager.SetComponentData(entity, new Heading { Value = new float3(1, 0, 0) });
@@ -50,6 +51,7 @@ namespace ECSChess.Systems.UserInput
                     EntityManager.AddComponent(selectedEntities, typeof(Heading));
                     EntityManager.AddComponent(selectedEntities, typeof(Destination));
                     EntityManager.RemoveComponent(selectedEntities, typeof(Selected));
+                    EntityManager.RemoveComponent(selectedEntities, typeof(Frozen));
                     float duration = 2f; // Duration for movement is 2 seconds
                     for (int i = 0; i < selectedEntities.Length; i++)
                     {
