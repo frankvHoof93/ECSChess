@@ -41,7 +41,6 @@ namespace ECSChess.Systems.Movement
                 None = new ComponentType[] { typeof(Frozen), typeof(SkipFreeze), typeof(Heading) }
             };
             entityQuery = GetEntityQuery(desc);
-            //Enabled = false; // DEMO
         }
 
         /// <summary>
