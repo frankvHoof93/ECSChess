@@ -2,6 +2,7 @@
 using Unity.Entities;
 using Unity.Rendering;
 using Unity.Transforms;
+using UnityEngine;
 
 namespace ECSChess.Systems.Movement
 {
@@ -21,10 +22,11 @@ namespace ECSChess.Systems.Movement
     [UpdateAfter(typeof(RenderMeshSystemV2))]
     public class FreezeStaticObjectsSystem : ComponentSystem
     {
+        private Transform cameraTransform;
         /// <summary>
         /// Query of Entities for System
         /// </summary>
-        private EntityQuery EntityQuery;
+        private EntityQuery entityQuery;
 
         #region Methods
         /// <summary>
@@ -38,7 +40,7 @@ namespace ECSChess.Systems.Movement
                 All = new ComponentType[] { ComponentType.ReadOnly<WorldRenderBounds>(), ComponentType.ReadOnly<RenderMesh>() },
                 None = new ComponentType[] { typeof(Frozen), typeof(SkipFreeze), typeof(Heading) }
             };
-            EntityQuery = GetEntityQuery(desc);
+            entityQuery = GetEntityQuery(desc);
             //Enabled = false; // DEMO
         }
 
@@ -47,7 +49,12 @@ namespace ECSChess.Systems.Movement
         /// </summary>
         protected override void OnUpdate()
         {
-            EntityManager.AddComponent(EntityQuery, typeof(Frozen));
+            if (!cameraTransform)
+                cameraTransform = Camera.main.transform;
+            if (!cameraTransform.hasChanged)
+                EntityManager.AddComponent(entityQuery, typeof(Frozen));
+            else
+                cameraTransform.hasChanged = false;
         }
         #endregion
     }
